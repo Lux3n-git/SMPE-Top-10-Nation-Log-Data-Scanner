@@ -2,14 +2,18 @@ import gzip
 import tkinter
 from tkinter import filedialog
 import os
-import pygsheets
 import re
 from colorama import Fore
 import sys
 import time
+import openpyxl as xl
+
+from openpyxl.styles import PatternFill
+from openpyxl.utils import get_column_letter, exceptions
 
 #the following likely will be for the temporary code
-from datetime import datetime
+
+from datetime import datetime, date, timedelta
 import calendar
 
 ascii_logo =  """      
@@ -30,7 +34,7 @@ print("===================Luxen's SMPE Top 10 Naton Log Data Scanner============
 print("")
 while True:
     try:
-        print("Launching File Explorer...")
+        print(Fore.LIGHTMAGENTA_EX + "Launching File Explorer...")
         print("")
         print("Please Select a folder containing the chat logs.")
         window = tkinter.Tk()
@@ -84,14 +88,16 @@ while True:
                             res_count = list(re.finditer("- \([0-9]+\)", nation_info_inst))[-1]
                             nations_res_count[nation_info_inst[1:res_count.start(0)-1]] = res_count.group(0)[3:-1]
                             
-
-                    top_10_nation_list[gzlog[:-7]] = nations_res_count
+                    if gzlog[:10] in top_10_nation_list.keys():
+                        top_10_nation_list.update({gzlog[:10] : nations_res_count})
+                    else:
+                        top_10_nation_list[gzlog[:10]] = nations_res_count
 
     #temp
-    for date, nation_info in top_10_nation_list.items():
-        format_date = datetime.strptime(date[:10], "%Y-%m-%d")
+    for date_, nation_info in top_10_nation_list.items():
+        format_date = datetime.strptime(date_[:10], "%Y-%m-%d")
         print(Fore.YELLOW + "---- Date: {} {}, {} ----".format(format_date.day, calendar.month_name[format_date.month], format_date.year))
-        print("Log # for date: {}".format(date[11:]))
+        print("Log # for date: {}".format(date_[11:]))
         iter_count = 1
         for nation, res_count in nation_info.items():
             print(Fore.GREEN +"#{} : ".format(iter_count) + Fore.LIGHTBLUE_EX + "Nation: " + Fore.LIGHTCYAN_EX + str(nation) + Fore.GREEN + " |" +
@@ -99,14 +105,123 @@ while True:
             iter_count += 1
         print("")
 
+    print(Fore.GREEN + "Logs have been scanned. Data Organized")
+    print("")
 
-    #print(Fore.WHITE + str(top_10_nation_list))
+    print(Fore.LIGHTMAGENTA_EX + "1: Write data to existing excel file (MUST BE A FILE MADE BY THIS PROGRAM)")
+    print("2: Create new excel file")
+    askexcelwrite = ""
+    while askexcelwrite.lower() not in ["1", "2", "one", "two"]:
+        askexcelwrite = input(Fore.MAGENTA + "(1 or 2): ")
+        askexcelwrite.lower()
+        workbook = ""
+        if askexcelwrite in ["1", "one"]:  
+            while workbook == "":
+                try:
+                    print('')
+                    print(Fore.LIGHTMAGENTA_EX + "Launching File Explorer...")
+                    print('')
+                    print("Select Existing File to write the data")
+                    window = tkinter.Tk()
+                    window.withdraw()
+                    window.wm_attributes('-topmost', 1)
+                    xl_file_path = filedialog.askopenfile(initialdir="~/Documents")
+                    window.destroy()
+                    workbook = xl.load_workbook(xl_file_path.name)                    
+                except FileNotFoundError or AttributeError:
+                    print(Fore.WHITE + "Error: File Not Selected")
+                    print("Relaunching File Explorer in 3 seconds...")
+                    time.sleep(3) 
+                    continue
+                except exceptions.InvalidFileException:
+                    print(Fore.WHITE + "Error: Inavlid file type. must be '.xlsx'")
+                    print("Relaunching File Explorer in 3 seconds...")
+                    time.sleep(3) 
+                    continue
+        elif askexcelwrite in ["2", "two"] :
+            while workbook == "":
+                try:
+                    print('')
+                    print(Fore.LIGHTMAGENTA_EX + "Launching File Explorer...")
+                    print('')
+                    print("Select Desination for new Excel file.")
+                    window = tkinter.Tk()
+                    window.withdraw()
+                    window.wm_attributes('-topmost', 1)
+                    xl_file_path = filedialog.asksaveasfile(
+                        filetypes=[("Excel Workbook","*.xlsx")],
+                        defaultextension = [("Excel Workbook","*.xlsx")],
+                        initialfile = "sheet",
+                        initialdir="~/Documents"
+                        )
+                    window.destroy()
+                    workbook = xl.Workbook()
+                except FileNotFoundError:
+                    print(Fore.WHITE + "Error: File Not Selected")
+                    print("Relaunching File Explorer in 3 seconds...")
+                    time.sleep(3) 
+                    continue
+        else:
+            print("Error: Invalid response")
+            continue
 
+    sheet = workbook.active
+    sheet['A1'].fill = PatternFill(start_color="6aa84f", end_color="6aa84f", fill_type = "solid")
+    sheet['A1'].value = "Days Since Release (Date)"
+    sheet['B1'].fill = PatternFill(start_color="ffff00", end_color="ffff00", fill_type = "solid")
+    sheet['B1'].value = "#1"
+    sheet['C1'].fill = PatternFill(start_color="b7b7b7", end_color="b7b7b7", fill_type = "solid")
+    sheet['C1'].value = "#2"
+    sheet['D1'].fill = PatternFill(start_color="a97b57", end_color="a97b57", fill_type = "solid")
+    sheet['D1'].value = "#3"
+    postion4_10 = [sheet.cell(row=1,column=i) for i in range(5,12)]
+    for i, postion in enumerate(postion4_10):
+        postion.value = "#" + str(i+4)
+        postion.fill = PatternFill(start_color="00ff00", end_color="00ff00", fill_type = "solid")
+    column_lengths = [1,1,1,1,1,1,1,1,1,1,1]
+    for i in range((date.today() - date(2021, 7, 1)).days):
+        i = i + 1
+        j = (i*2)
+        cell = sheet.cell(row=j,column=1)
+        date_ = datetime(2021, 7, 1) + timedelta(days=i-1)
+        cell.value = "Day {} ({} {}, {})".format(i, calendar.month_abbr[date_.month], date_.day, date_.year)
+        cell.fill = PatternFill(start_color="b7e1cd", end_color="b7e1cd", fill_type = "solid")
+        if len(cell.value) > column_lengths[0]:
+            column_lengths[0] = len(cell.value)
 
+        sheet.cell(row=j+1,column=1).value = "# of Residents"
+        try:
+            first_log_date = list(top_10_nation_list.keys())[0]
+            first_log_date_formatted = datetime.strptime(first_log_date[:10], "%Y-%m-%d")
+        except IndexError:
+            first_log_date_formatted = None
+        if date_ == first_log_date_formatted:
+            column_iter = 2
+            for nation, res_count in top_10_nation_list[first_log_date].items():
 
+                nationcell = sheet.cell(row=j,column=column_iter)
+                nationcell.value = str(nation)
+                if len(nationcell.value) > column_lengths[column_iter-1]:
+                    column_lengths[column_iter-1] = len(nationcell.value)
+
+                res_count_cell = sheet.cell(row=j+1,column=column_iter)
+                res_count_cell.value = str(res_count)
+                if len(res_count_cell.value) > column_lengths[column_iter-1]:
+                    column_lengths[column_iter-1] = len(res_count_cell.value)
+
+                column_iter += 1
+            top_10_nation_list.pop(first_log_date, None)
+    for i, column_width in enumerate(column_lengths,1):
+        sheet.column_dimensions[get_column_letter(i)].width = column_width
+
+    workbook.save(filename = xl_file_path.name)
+    workbook.close()
+    print("")
+    print(Fore.GREEN + "Data successfully transfered to spreadsheet")
+    print("")
     asktorepeat = ""
     while asktorepeat.lower() != "y":
-        asktorepeat = input(Fore.LIGHTMAGENTA_EX + "Logs have been scanned. Open another folder? (y/n)")
+        asktorepeat = input(Fore.LIGHTMAGENTA_EX + "Open another folder? (y/n)")
         asktorepeat.lower()
         if asktorepeat == "n":    
             print("Exiting Program in 3 seconds.....")

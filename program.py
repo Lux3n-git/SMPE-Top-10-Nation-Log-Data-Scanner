@@ -60,7 +60,11 @@ while True:
     for gzlog in logs_list:
         if gzlog.endswith('.gz') and (int(gzlog[0:4]) > 2021 or (int(gzlog[0:4]) == 2021 and int(gzlog[5:7]) >= 7)):
             print(Fore.BLUE + "Scanning {}".format(gzlog))
-            log = gzip.open(logs_folder + "/" +gzlog, 'rt').read()
+            try:
+                log = gzip.open(logs_folder + "/" +gzlog, 'rt', encoding='cp437').read()
+            except EOFError:
+                print(Fore.RED + "Failed to Open File, Skipping")
+                continue
             log = log.replace('§b', "")
             log = log.replace("§8", "")
             last_nation_inst = log.rfind('.[ Nations ].')
@@ -179,7 +183,10 @@ while True:
     for i, postion in enumerate(postion4_10):
         postion.value = "#" + str(i+4)
         postion.fill = PatternFill(start_color="00ff00", end_color="00ff00", fill_type = "solid")
-    column_lengths = [1,1,1,1,1,1,1,1,1,1,1]
+    column_lengths = []
+    for i in range(1,12):
+        column_lengths.append(sheet.column_dimensions[get_column_letter(i)].width)
+    
     for i in range((date.today() - date(2021, 7, 1)).days):
         i = i + 1
         j = (i*2)

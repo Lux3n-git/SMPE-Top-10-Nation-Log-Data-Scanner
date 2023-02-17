@@ -67,9 +67,10 @@ while True:
             if last_nation_inst != -1:
                 list_nation_end = log.find('<<<',last_nation_inst)
                 checknationtype = log[log.find('Nation Name - ',last_nation_inst)+14:log.find('Nation Name - ',last_nation_inst)+33] == "Number of Residents"
+                server_ind_start = log.rfind("/INFO]: Connecting to ", 0, last_nation_inst) + len("/INFO]: Connecting to ")
                 list_nation_page_num = log.find('<<<',last_nation_inst)+11
-                #print(Fore.LIGHTCYAN_EX + str(log[last_nation_inst:list_nation_end]))
-                if int(log[list_nation_page_num]) == 1 and checknationtype:
+                #print(log[server_ind_start:server_ind_start+len("play.smpearth.com, 25565")], int(log[list_nation_page_num]), checknationtype)
+                if int(log[list_nation_page_num]) == 1 and checknationtype and log[server_ind_start:server_ind_start+len("play.smpearth.com, 25565")] == "play.smpearth.com, 25565":
                     print(Fore.GREEN + "Found Top 10 Nations List")
                     nation_list_formatted = str(log[last_nation_inst:list_nation_end])
                     nation_list_formatted = nation_list_formatted.replace("[Render thread/INFO]: [System] [CHAT]", "")

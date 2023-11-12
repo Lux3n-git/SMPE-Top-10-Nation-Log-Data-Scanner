@@ -149,7 +149,7 @@ while True:
                     print('')
                     print(Fore.LIGHTMAGENTA_EX + "Launching File Explorer...")
                     print('')
-                    print("Select Desination for new Excel file.")
+                    print("Select Destination for new Excel file.")
                     window = tkinter.Tk()
                     window.withdraw()
                     window.wm_attributes('-topmost', 1)
